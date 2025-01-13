@@ -1,97 +1,104 @@
-import staticRedirections from './staticRedirectionsInfodrive.json' assert { type: 'json' };
-import dynamicRedirections, { util, redirectUrl as volzaRedirectionUrl } from './dynamicRedirectionsInfodrive.js';
-import fs from 'fs';
-import pathToRegexp from './path-to-regexp.js'
+const { util, redirectUrl: volzaRedirectionUrl } = require('./dynamicRedirectionsInfodrive');
+const pathToRegexp = require('./path-to-regexp');
 
-const permanentRedirectionList = staticRedirections.concat(dynamicRedirections).map(entry => {
-    if (Array.isArray(entry)) {
-        return { from: entry[0], to: entry[1] };
-    }
-    return entry;
-});
-const logger = console;
+const redirector = {
+    redirectUrl: "https://www.volza.com/{statusCode}",
+    domainPrefix: "https://www.volza.com/",
 
-// Create a matcher for the router
-permanentRedirectionList.forEach(rule => {
-    rule.keys = [];
-    rule.regexp = pathToRegexp(rule.from, rule.keys, { end: true });
-});
+    statusHandler: null,
 
-const retrievePermanentUrl = (source) => {
-    const ruleList = permanentRedirectionList;
-    for (const rule of ruleList) {
-        //Try matching the URL pattern with source
-        const match = rule.regexp.exec(source);
-        if (match) {
-            const params = rule.keys.reduce((acc, key, index) => {
-                acc[key.name] = match[index + 1];
-                return acc;
-            }, {});
-            let fn = rule.to;
-            if (typeof fn === 'string') {
-                if (fn.startsWith("$")) {
-                    fn = util[rule.to.substring(1)];
-                } else if (fn.includes("{")) {
-                    fn = util.replacement;
-                }
-            }
-            let resultUrl = typeof fn === 'function' ? fn({ params, rule }) : rule.to;
-            return { ...rule, resultUrl };
+    async fetch(request, response, next) {
+        const result = redirector.retrievePermanentUrl(request.url);
+        if (Response) {
+            //response = Response; TODO Discuss how we can handle or debug with cloudflare 
         }
-    }
-};
+        if (!result?.resultUrl) {
+            if (next) {
+                return next();
+            }
+            return fetch(request);
+        }
+        let resultUrl = result.resultUrl;
+        if (typeof resultUrl === 'number') {
+            if (redirector.statusHandler) {
+                redirector.statusHandler(request, response, next);
+                return;
+            }
+            return response.redirect(redirector.redirectUrl.replace("{statusCode}", resultUrl), resultUrl);
+        }
+        if (!resultUrl.startsWith('https://')) {
+            resultUrl = `${redirector.domainPrefix}${resultUrl}`;
+        }
+        return response.redirect(resultUrl, 301);
+    },
 
-const reroute = (req, res, next) => {
-	const result = retrievePermanentUrl(req.url);
-	if (result?.resultUrl) {
-		let resultUrl = result.resultUrl;
-		if (typeof resultUrl === 'number') {
-			res.status(resultUrl);
-			return next.render(req, res, '/wrapper404');
-		}
-		if(!resultUrl.startsWith('https://')) {
-			resultUrl = `${volzaRedirectionUrl}${resultUrl}`;
-		}
-		return res.redirect(resultUrl, util.StatusCode.PermanentRedirect);
-	}
-	next();
-}
-
-const executeTests = async () => {
-    const testCaseData = fs.readFileSync('./test-cases-info-drive.csv', 'utf8');
-    let testCases = [];
-    // push static test cases
-    staticRedirections.forEach(({ from, to, tests }) => {
-        if (tests) {
-            tests.forEach((testCase) => {
-                if (typeof testCase === 'string') {
-                    testCases.push([testCase, to]);
+    configure: function (urlLists) {
+        const finalList = [];
+        for (const list of urlLists) {
+            list.forEach(entry => {
+                if (Array.isArray(entry)) {
+                    finalList.push({ from: entry[0], to: entry[1] });
                 } else {
-                    testCases.push(testCase);
+                    finalList.push(entry);
                 }
             });
-        } else {
-            testCases.push([from, to]);
         }
-    });
-    testCases = [...testCases, ...testCaseData.split(/\r?\n/).map((entry) => entry.split(","))];
-    const total = testCases.length;
-    let pass = 0, fail = 0;
-    for (let rowNum = 0; rowNum < total; rowNum++) {
-        const [source, target] = testCases[rowNum];
-        const result = retrievePermanentUrl(source);
-        if (!result) {
-            logger.error(`Failed: ${rowNum + 1}: Source: ${source} Expected: ${target} - No matching pattern find`);
-            fail++;
-        } else if (result.resultUrl !== target) {
-            logger.error(`Failed: ${rowNum + 1}: Source: ${source} Expected: ${target} Got: ${result.resultUrl}`);
-            fail++;
-        } else {
-            logger.log(`Passed: ${rowNum + 1}: Source: ${source}`);
-            pass++;
+        finalList.forEach(rule => {
+            rule.keys = [];
+            rule.regexp = pathToRegexp(rule.from, rule.keys, { end: true });
+        });
+        this.permanentRedirectionList = finalList;
+    },
+
+    logger: console,
+
+    retrievePermanentUrl : function(source) {
+        const ruleList = this.permanentRedirectionList;
+        for (const rule of ruleList) {
+            //Try matching the URL pattern with source
+            const match = rule.regexp.exec(source);
+            if (match) {
+                const params = rule.keys.reduce((acc, key, index) => {
+                    acc[key.name] = match[index + 1];
+                    return acc;
+                }, {});
+                let fn = rule.to;
+                if (typeof fn === 'string') {
+                    if (fn.startsWith("$")) {
+                        fn = util[rule.to.substring(1)];
+                    } else if (fn.includes("{")) {
+                        fn = util.replacement;
+                    }
+                }
+                let resultUrl = typeof fn === 'function' ? fn({ params, rule }) : rule.to;
+                return { ...rule, resultUrl };
+            }
         }
     }
-    logger.log(`Total - Passed: ${pass}, Failed: ${fail}`);
 }
 
-executeTests();
+// identify is this cloudflare
+if (process.env.ENVIRONMENT === 'Production') {
+    const baseUrl = "https://cloudflare.com";
+    const listUrls = ['static.json'];
+    const lists = [];
+    for (const listUrl of listUrls) {
+        list.push(JSON.parse(fetch(`${baseUrl}${listUrl}`)))
+    }
+    redirector.configure(lists);
+}
+
+module.exports = redirector;
+
+/*
+const redirector = require('redirector');
+
+staticJson = fs.read(....)
+
+redirector.statusHandler = function(statusCode, req, res, next) {
+
+}
+redirector.configure([staticList, dynamicList]);
+
+expres.use(redirector.expressMiddleware);
+*/

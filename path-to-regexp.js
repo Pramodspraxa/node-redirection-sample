@@ -19,7 +19,7 @@ var MATCHING_GROUP_REGEXP = /\\.|\((?:\?<(.*?)>)?(?!\?)/g;
  * @api private
  */
 
-export default function pathToRegexp(path, keys, options) {
+module.exports = function pathToRegexp(path, keys, options) {
     options = options || {};
     keys = keys || [];
     let extraOffset = 0, keysOffset = keys.length, i = 0, name = 0, pos = 0, backtrack = '', m;

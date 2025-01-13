@@ -1,4 +1,4 @@
-export default {
+module.exports = {
 	"bangladesht3": "bangladesh",
     "belgiumt3": "belgium",
     "chinat3": "china",

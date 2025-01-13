@@ -1,6 +1,6 @@
-import countryFilterMapping from './countryFilterMapping.js';
-import tradePorts from './ports.js';
-import countryLookup from './countryLookup.js';
+const countryFilterMapping = require('./countryFilterMapping.js');
+const tradePorts = require('./ports.js');
+const countryLookup = require('./countryLookup.js');
 
 const regexToReplaceKeywords = /(_|-| )/g;
 const hsCodeWithOrKeyword = /^(\d{4,8})-or-hscode$/;
@@ -8,7 +8,7 @@ const hsCodeKeywordRegex = /^(\d{4,8})-hscode$/;
 const hsnVariation = /^(\d{4,8})hscode$/;
 const regexOfKeywordAndHSN = /^(?<product>.*?)\s+and\s+hscode\s+(?<hsn>\d+)$/;
 const numericRegex = /^[0-9]+$/;
-const redirectUrl = 'https://www.volza.com';
+const redirectUrl = 'https://bugfix-www.volza.com';//process.env.NEXT_PUBLIC_REBRAND_URL || 'https://www.volza.com';//TODO change to www.volza.com
 const wordPressSiteRedirectUrl = 'https://infodriveindia.in';
 const infodriveUrl = 'https://www.infodriveindia.com';
 const tabwiseText = {
@@ -81,7 +81,7 @@ const util = {
     usCodMapper({ params }) {
         const { expImp, country, keyword } = params;
         const buyerSupplier = expImp == "importer" ? "buyers" : "manufacturers";
-        const secondCountryPrefix = expImp == "importer" ? "coo" : "cod"; 
+        const secondCountryPrefix = expImp == "importer" ? "coo" : "cod";
         if (country && !util.removeSpecialCharacterSearch.includes(country)) {
             return `/p/${util.cleanKeyword(keyword)}/${buyerSupplier}/${buyerSupplier}-in-${util.parseCountryName(country)}/${secondCountryPrefix}-united-states/`;
         }
@@ -178,11 +178,7 @@ const util = {
     }
 }
 
-export {
-    util, redirectUrl
-}
-
-export default [
+const dynamicRedirections = [
     ['/companies/saranya-foods-exports--------79-386742.aspx', '/companies/saranya-foods-exports-79-386742.aspx'],
     ['/companies/sada-impex-------------------241-386805.aspx', '/companies/sada-impex-241-386805.aspx'],
     ['/companies/richmont-goods--services-pvt-ltd-369890.aspx', '/companies/richmont-goods-services-pvt-ltd-369890.aspx'],
@@ -636,3 +632,8 @@ export default [
         }
     }]
 ];
+module.exports = {
+    dynamicRedirections,
+    util,
+    redirectUrl
+}
