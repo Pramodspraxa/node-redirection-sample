@@ -21,8 +21,7 @@ const redirector = {
         let resultUrl = result.resultUrl;
         if (typeof resultUrl === 'number') {
             if (redirector.statusHandler) {
-                redirector.statusHandler(request, response, next);
-                return;
+                return redirector.statusHandler(request, response, next);
             }
             return response.redirect(redirector.redirectUrl.replace("{statusCode}", resultUrl), resultUrl);
         }
@@ -59,7 +58,7 @@ const redirector = {
             const match = rule.regexp.exec(source);
             if (match) {
                 const params = rule.keys.reduce((acc, key, index) => {
-                    acc[key.name] = match[index + 1];
+                    acc[key.name] = match[index + 1] ? decodeURIComponent(match[index + 1]): match[index + 1];
                     return acc;
                 }, {});
                 let fn = rule.to;
