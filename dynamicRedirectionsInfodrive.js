@@ -634,6 +634,5 @@ const dynamicRedirections = [
 ];
 module.exports = {
     dynamicRedirections,
-    util,
-    redirectUrl
+    util
 }

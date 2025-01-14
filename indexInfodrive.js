@@ -1,9 +1,9 @@
-const { util, redirectUrl: volzaRedirectionUrl } = require('./dynamicRedirectionsInfodrive');
+const { util } = require('./dynamicRedirectionsInfodrive');
 const pathToRegexp = require('./path-to-regexp');
 
 const redirector = {
     redirectUrl: "https://www.volza.com/{statusCode}",
-    domainPrefix: "https://www.volza.com/",
+    domainPrefix: "https://www.volza.com",
 
     statusHandler: null,
 
