@@ -35,9 +35,15 @@ const util = {
         const { to: pattern } = rule;
         const { keyword, hscode } = params;
         if (params.keyword) {
-            params.keyword = hsCodeWithOrKeyword.test(params.keyword)
-                ? `hsn-code-${keyword.replace(hsCodeWithOrKeyword, '$1')}`
-                : util.cleanKeyword(params.keyword);
+            if (hsCodeWithOrKeyword.test(params.keyword)) {
+                params.keyword = `hsn-code-${keyword.replace(hsCodeWithOrKeyword, '$1')}`;
+            }
+            else if (hsCodeKeywordRegex.test(params.keyword)) {
+                params.keyword = `hsn-code-${keyword.replace(hsCodeKeywordRegex, '$1')}`;
+            }
+            else {
+                params.keyword = util.cleanKeyword(params.keyword);
+            }
         }
         if (params.keyword1) {
             params.keyword1 = util.cleanKeyword(params.keyword1);
@@ -137,11 +143,11 @@ const util = {
         return `/p/${util.cleanKeyword(keyword)}/${buyerSupplier}/${buyerSupplier}-in-${util.parseCountryName(country, true)}/`;
     },
     parseCountryName(country, returnDefault) {
-        if ((!country || country === 'n/a')) {
+        if ((!country || ['n/a', 'not-available', 'not_available', 'na'].indexOf(country) > -1)) {
             return returnDefault ? 'global' : '';
         }
         if (country === 'korea') return 'north-korea';
-        country = country.replace(/_/g, ' ');
+        country = country.replace(/[ _]/g, '-').replace(/-{2,}/g, '-').replace(/^-+|-+$/g, '');
         country = (countryFilterMapping[country] || country).replace(/ /g, '-').split('/')[0].toLowerCase();
         return country || '';
     },
@@ -286,18 +292,21 @@ const dynamicRedirections = [
     ['/india-:expImp(import|export)-data/:keyword-:expImp2(import|export)/hscode-:hsCode-report.aspx',
         ({ params }) => {
             const { hsCode, expImp, keyword } = params;
-            return `/p/${util.cleanKeyword(keyword)}/${expImp}/${expImp === 'export' ? 'export-from' : 'import-in'}-india/` + (hsCode.length >= 4 ? `hsn-code-${hsCode}/` : '');
+            const isHS = hsCodeKeywordRegex.test(keyword);
+            return `/p/${isHS ? `${keyword.replace(hsCodeKeywordRegex, 'hsn-code-$1')}` : util.cleanKeyword(keyword)}/${expImp}/${expImp === 'export' ? 'export-from' : 'import-in'}-india/` + (!isHS && hsCode.length >= 4 ? `hsn-code-${hsCode}/` : '');
         }
     ],
     ['/india-:expImp(import|export)-data/:keyword-:expImp2(import|export)/fc-:country/:port-report.aspx',
         ({ params }) => {
-            const { keyword, expImp } = params;
-            const isImport = expImp == "import";
-            const country = util.parseCountryName(params.country, true);
-            if (keyword.indexOf("hscode") > -1 && (params.port && params.port.indexOf("hscode") > -1)) {
-                return `/p/hsn-code-${params.port.split('-').length > 1 ? params.port.split('-')[1] : params.port.split('-')[0]}/${expImp}/${isImport ? 'import-in' : 'export-from'}-india/${isImport ? 'coo' : 'cod'}-${country}/`;
+            const { keyword, expImp, port } = params;
+            const isImport = expImp === "import";
+            const country = util.parseCountryName(params.country);
+            const hsCodeFilter = port.indexOf("hscode") > - 1 ? `hsn-code-${port.split('-').length > 1 ? port.split('-')[1] : port.split('-')[0]}/` : '';
+            const secondCountryFilter = country ? `${isImport ? 'coo' : 'cod'}-${country}/` : '';
+            if ((keyword.indexOf("hscode") > -1 || keyword.length < 3) && hsCodeFilter) {
+                return `/p/${hsCodeFilter}${expImp}/${isImport ? 'import-in' : 'export-from'}-india/${secondCountryFilter}`;
             }
-            return `/p/${util.cleanKeyword(keyword)}/${expImp}/${isImport ? 'import-in' : 'export-from'}-india/${isImport ? 'coo' : 'cod'}-${country}/`;
+            return `/p/${util.cleanKeyword(keyword)}/${expImp}/${isImport ? 'import-in' : 'export-from'}-india/${hsCodeFilter}${secondCountryFilter}`;
         }
     ],
     ['/india-:expImp(import|export)-data/:keyword-:expImp2(import|export)/fc-:country([a-zA-Z_/-]{1,40})-report.aspx',
@@ -317,14 +326,15 @@ const dynamicRedirections = [
     ['/india-:expImp(import|export)-data/:keyword-:expImp2(import|export)/fc-:country([a-zA-Z_/-]{1,40})/hscode-:hsCode-report.aspx', '/p/{keyword}/{expImp}/{importInOrExportTo}-india/'],
     ['/india-:expImp(import|export)-data/:keyword-:expImp2(import|export)/fc-:country([a-zA-Z_/-]{1,40})/hscode-:hsCode/lp-:port-report.aspx',
         ({ params }) => {
-            const { expImp } = params;
+            const { expImp, hsCode } = params;
             const isImport = expImp == "import";
             const country = util.parseCountryName(params.country)
             const keyword = util.cleanKeyword(params.keyword);
             if (keyword.indexOf('hscode') === -1 && keyword.length >= 3) {
-                return `/p/${keyword}/${expImp}/${isImport ? 'import-in' : 'export-from'}-india/${country ? `${isImport ? 'coo' : 'cod'}-${country}/` : ''}`;
+                const hsCodeFilter = hsCode.length >= 3 ? `hsn-code-${hsCode}/` : '';
+                return `/p/${keyword}/${expImp}/${isImport ? 'import-in' : 'export-from'}-india/${hsCodeFilter}${country ? `${isImport ? 'coo' : 'cod'}-${country}/` : ''}`;
             }
-            return `/p/hsn-code-${params.hsCode.length >= 3 ? params.hsCode : params.keyword.split('-')[0]}/${expImp}/${isImport ? 'import-in' : 'export-from'}-india/${country ? `${isImport ? 'coo' : 'cod'}-${country}/` : ''}`;
+            return `/p/hsn-code-${hsCode.length >= 3 ? hsCode : keyword.split('-')[0]}/${expImp}/${isImport ? 'import-in' : 'export-from'}-india/${country ? `${isImport ? 'coo' : 'cod'}-${country}/` : ''}`;
         }
     ],
     ['/indian-:importerExporter(importers|exporters)/:keyword-:importerExporter2(importers|exporters).aspx',
@@ -426,7 +436,7 @@ const dynamicRedirections = [
     ['/us-:expImp(import|export)-data/:keyword-(import|export)/us-port-:lport/foreign-port-:fport.aspx', '/p/{keyword}/{expImp}/{importInOrExportTo}-united-states/'],
     ['/us-:expImp(import|export)-data/:keyword-(import|export)/us-port-:lport/foreign-country-:country.aspx', '/p/{keyword}/{expImp}/{importInOrExportTo}-united-states/{secondCountryPrefix}-{country}/'],
     ['/us-:expImp(import|export)-data/:keyword-(import|export)(/us-port-:lport)?/foreign-country-:country/foreign-port-:fport.aspx', '/p/{keyword}/{expImp}/{importInOrExportTo}-united-states/{secondCountryPrefix}-{country}/'],
-    ['/us-:expImp(import|export)-data/:keyword-(import|export)(/us-port-:lport)?/foreign-port-:fport/foreign-country-:country.aspx', '/p/{keyword}/{expImp}/{importInOrExportTo}-united-states/{secondCountryPrefix}-{country}/'],
+    ['/us-:expImp(import|export)-data/:keyword-(import|export)(/us-port-:lport)?/foreign-port-:fport/foreign-country-:country.aspx', '$usImpExpMapper'],
     ['/us-:expImp(import|export)-data/:keyword-(import|export)(/foreign-country-:country)?/foreign-port-:fport/us-port-:lport.aspx', '$usImpExpMapper'],
     ['/us-:expImp(import|export)-data/:keyword-(import|export)/foreign-port-:fport/us-port-:lport/foreign-country-:country.aspx', '/p/{keyword}/{expImp}/{importInOrExportTo}-united-states/{secondCountryPrefix}-{country}/'],
     ['/us-:expImp(import|export)-data/:keyword-(import|export)(/foreign-port-:fport)?/foreign-country-:country/us-port-:lport.aspx', '$usImpExpMapper'],
@@ -461,7 +471,7 @@ const dynamicRedirections = [
             const keyword = util.cleanKeyword(params.keyword);
             const firstCountry = impExp === 'import' ? 'import-in' : 'export-from';
             const secondCountryPrefix = impExp === 'import' ? 'coo' : 'cod';
-            return keyword.length >= 3 ? `/p/${keyword}/${impExp}/${firstCountry}-india/${secondCountryPrefix}-${util.parseCountryName(country)}/` : `/p/hsn-code-${hscode}/${impExp}/${firstCountry}-india/${secondCountryPrefix}-${util.parseCountryName(country)}/`;
+            return keyword.length >= 3 ? `/p/${keyword}/${impExp}/${firstCountry}-india/${hscode ? `hsn-code-${hscode}/` : ""}${secondCountryPrefix}-${util.parseCountryName(country)}/` : `/p/hsn-code-${hscode}/${impExp}/${firstCountry}-india/${secondCountryPrefix}-${util.parseCountryName(country)}/`;
         }
     ],
     ['/india-:expImp(import|export)-data/:keyword-:expImp2(import|export)/fp-:portName([a-zA-Z_/-]{1,40})-report.aspx', '/p/{keyword}/{expImp}/{importInOrExportTo}-india/'],
@@ -481,17 +491,21 @@ const dynamicRedirections = [
             const { expImp, country, hscode } = params;
             const keyword = util.cleanKeyword(params.keyword);
             const firstCountryPrefix = expImp === 'import' ? 'import-in' : 'export-from';
+            const cleanKeyword = hsCodeKeywordRegex.test(keyword) ? `${keyword.replace(hsCodeKeywordRegex, 'hsn-code-$1')}` : `${keyword}`;
             if (hscode && hscode.length >= 4 && (country && country == "others" || !country)) {
                 if (isNaN(Number(keyword)) && keyword.length > 2) {
-                    return `/p/${keyword}/${expImp}/${firstCountryPrefix}-india/hsn-code-${hscode}/`;
+                    return `/p/${cleanKeyword}/${expImp}/${firstCountryPrefix}-india/${!hsCodeKeywordRegex.test(keyword) ? `hsn-code-${hscode}/` : ''}`;
                 }
                 return `/p/hsn-code-${hscode}/${expImp}/${firstCountryPrefix}-india/`;
             }
             if (country && country != "others") {
                 const secondCountryPrefix = expImp === 'import' ? 'coo' : 'cod';
-                return `/p/${keyword}/${expImp}/${firstCountryPrefix}-india/${secondCountryPrefix}-${util.parseCountryName(country)}/`;
+                if (cleanKeyword == 'hscode') {
+                    return `/p/hsn-code-${hscode}/${expImp}/${firstCountryPrefix}-india/${secondCountryPrefix}-${util.parseCountryName(country)}/`;
+                };
+                return `/p/${cleanKeyword}/${expImp}/${firstCountryPrefix}-india/${hscode && keyword != '-hscode' && cleanKeyword.indexOf('hsn-code-') < 0 ? `hsn-code-${hscode}/` : ''}${secondCountryPrefix}-${util.parseCountryName(country)}/`;
             }
-            return `/p/${keyword}/${expImp}/${firstCountryPrefix}-india/`;
+            return `/p/${cleanKeyword}/${expImp}/${firstCountryPrefix}-india/`;
         }
     ],
     ['/india-:expImp(export|import)-data/:keyword-:expImp2(export|import)/fc-:COD/month-:monthYear/lp-:localPort/unit-:unit-report.aspx', '/p/{keyword}/{expImp}/{importInOrExportTo}-india/{secondCountryPrefix}-{COD}/'],
