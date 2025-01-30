@@ -101,5 +101,5 @@ module.exports = function pathToRegexp(path, keys, options) {
         path += options.lookahead !== false ? '(?=/|$)' : '(?:/|$)';
     }
 
-    return new RegExp('^' + path, options.sensitive ? '' : 'i');
+    return new RegExp('^' + path.replace("?", '\\?'), options.sensitive ? '' : 'i');
 };
