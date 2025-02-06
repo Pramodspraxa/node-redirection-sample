@@ -23,7 +23,6 @@ module.exports = function pathToRegexp(path, keys, options) {
     options = options || {};
     keys = keys || [];
     let extraOffset = 0, keysOffset = keys.length, i = 0, name = 0, pos = 0, backtrack = '', m;
-    path = path.replace(/\?/g, '\\?').replace(/&/g, '\\&');
     path = path.replace(
         /\\.|(\/)?(\.)?:(\w+)(\(.*?\))?(\*)?(\?)?|[.*]|\/\(/g,
         function (match, slash, format, key, capture, star, optional, offset) {
