@@ -23,7 +23,7 @@ const redirector = {
             if (redirector.statusHandler) {
                 return redirector.statusHandler(request, response, next);
             }
-            return response.redirect(redirector.redirectUrl.replace("{statusCode}", resultUrl), resultUrl);
+            return response.redirect(redirector.redirectUrl.replace("{statusCode}", resultUrl.toString()), resultUrl);
         }
         if (!resultUrl.startsWith('https://')) {
             resultUrl = `${redirector.domainPrefix}${resultUrl}`;
