@@ -16,13 +16,12 @@ async function loadCacheData() {
 	const baseUrl = "https://bugfix-www.volza.com/";
 	const now = Date.now();
 
-	if (!cache.tradePorts || !cache.countryFilterMapping || now - cache.lastFetched > cache.cacheDuration) {
+	if (!cache.tradePorts || !cache.countryFilterMapping || !cache.countryLookup || now - cache.lastFetched > cache.cacheDuration) {
 		const [tradePortsRes, countryMappingRes, countryLookupRes] = await Promise.all([
 			fetch(`${baseUrl}ports.json`, { headers: headers }),
 			fetch(`${baseUrl}countryfiltermapping.json`, { headers: headers }),
 			fetch(`${baseUrl}countrylookup.json`, { headers: headers })
 		]);
-
 		if (tradePortsRes.ok) cache.tradePorts = await tradePortsRes.json();
 		if (countryMappingRes.ok) cache.countryFilterMapping = await countryMappingRes.json();
 		if (countryLookupRes.ok) cache.countryLookup = await countryLookupRes.json();
@@ -38,7 +37,8 @@ export default {
 		}
 		redirector.configure([dynamicRedirections]);
 		redirector.statusHandler = (req, res, next) => {
-			return new Response("This page not Found", { status: 404 });//TODO this is not yet
+			//TODO changes for 404 page are remain here
+			return new Response("This page not Found", { status: 404 });
 		}
 		return redirector.fetch(request, response, next);
 	}
@@ -149,7 +149,7 @@ const invalidCountries = ['na', 'global', 'global-exporters-importers-export', '
 const dynamicRedirections = [
 	['/top-products/top-:impExp(import|export)-products-:ofOrFrom(of|from)-:firstCountry:?(-to-:secondCountry)?',
 		({ params }) => {
-			const { firstCountry, impExp, ofOrFrom, secondCountry = '' } = params;
+			const { firstCountry, impExp, secondCountry = '' } = params;
 			const firstCountryName = util.getCountryFilterMapping(firstCountry);
 			const secondCountryName = util.getCountryFilterMapping(secondCountry);
 			return `/global-trade-data/${firstCountryName}-${impExp}-trade-data/top-${impExp}-products-${secondCountry ? 'from-' + firstCountryName + '-to-' + secondCountryName : 'of-' + firstCountryName}/`;
@@ -722,12 +722,6 @@ const util = {
 				params.keyword = util.cleanKeyword(params.keyword);
 			}
 		}
-		if (params.keyword1) {
-			params.keyword1 = util.cleanKeyword(params.keyword1);
-		}
-		if (params.keyword2) {
-			params.keyword2 = util.cleanKeyword(params.keyword2);
-		}
 		if (params.COO) {
 			params.COO = util.parseCountryName(params.COO);
 		}
@@ -790,7 +784,7 @@ const util = {
 	usImpExpMapper({ params }) {
 		const { expImp, country, keyword } = params;
 		const importInOrExportTo = expImp == "import" ? "import-in" : "export-from";
-		const secondCountryPrefix = params.expImp === 'import' ? 'coo' : 'cod';
+		const secondCountryPrefix = expImp === 'import' ? 'coo' : 'cod';
 		const countryName = util.parseCountryName(country);
 		if (countryName) {
 			return `/p/${util.cleanKeyword(keyword)}/${expImp}/${importInOrExportTo}-united-states/${secondCountryPrefix}-${countryName}/`;
