@@ -17,14 +17,17 @@ async function loadCacheData() {
 	const now = Date.now();
 
 	if (!cache.tradePorts || !cache.countryFilterMapping || !cache.countryLookup || now - cache.lastFetched > cache.cacheDuration) {
-		const [tradePortsRes, countryMappingRes, countryLookupRes] = await Promise.all([
-			fetch(`${baseUrl}ports.json`, { headers: headers }),
-			fetch(`${baseUrl}countryfiltermapping.json`, { headers: headers }),
-			fetch(`${baseUrl}countrylookup.json`, { headers: headers })
-		]);
-		if (tradePortsRes.ok) cache.tradePorts = await tradePortsRes.json();
-		if (countryMappingRes.ok) cache.countryFilterMapping = await countryMappingRes.json();
-		if (countryLookupRes.ok) cache.countryLookup = await countryLookupRes.json();
+		const responseData = await fetch(`${baseUrl}infodrive-dynamic.json`, { headers: headers });
+		if (responseData.ok) {
+			const data = await responseData.json();
+			cache.tradePorts = data.ports;
+			cache.countryFilterMapping = data.countryFilterMapping;
+			cache.countryLookup = data.countryLookup;
+		}
+		if(!cache.html) {
+			const response404 = await fetch(`https://bugfix.infodriveindia.com/404/`, { method: 'GET'});
+			cache.html = await response404.text();
+		}
 		cache.lastFetched = now; // Update fetch timestamp
 	}
 }
@@ -32,13 +35,16 @@ async function loadCacheData() {
 export default {
 	async fetch(request, response, next) {
 		await loadCacheData();
-		if (!cache.tradePorts || !cache.countryFilterMapping) {
+		if (!cache.tradePorts || !cache.countryFilterMapping || !cache.countryLookup) {
 			return new Response("Data not available.", { status: 500 });
 		}
 		redirector.configure([dynamicRedirections]);
 		redirector.statusHandler = (req, res, next) => {
-			//TODO changes for 404 page are remain here
-			return new Response("This page not Found", { status: 404 });
+			return new Response(cache.html,
+				{
+					status: 404,
+					headers: { "Content-Type": "text/html" }
+				});
 		}
 		return redirector.fetch(request, response, next);
 	}
