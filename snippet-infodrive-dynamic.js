@@ -3,7 +3,7 @@ const cache = {
 	countryFilterMapping: null,
 	countryLookup: null,
 	lastFetched: 0, // Timestamp of last fetch
-	cacheDuration: 60 * 60 * 1000, // Cache for 1 hour (3600000ms)
+	cacheDuration: 24 * 60 * 60 * 1000, // Cache for 24 hour
 };
 const headers = {
 	"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
@@ -12,10 +12,14 @@ const headers = {
 	"Referer": "https://volza.com/", // Set as if it's a page visit
 	"Connection": "keep-alive"
 }
-async function loadCacheData() {
-	const baseUrl = "https://bugfix-www.volza.com/";
-	const now = Date.now();
+const redirectUrl = 'https://bugfix-www.volza.com';//site where we need to redirect on Volza
+const baseUrl = "https://bugfix-www.volza.com/";//URL to fetch external JSON files
+const wordPressSiteRedirectUrl = 'https://infodriveindia.in';//wordpress site url
+const infodriveUrl = 'https://www.infodriveindia.com';//infodrive site URL
+const externalLinkFor404 = 'https://bugfix.infodriveindia.com/404/'
 
+async function loadCacheData() {
+	const now = Date.now();
 	if (!cache.tradePorts || !cache.countryFilterMapping || !cache.countryLookup || now - cache.lastFetched > cache.cacheDuration) {
 		const responseData = await fetch(`${baseUrl}infodrive-dynamic.json`, { headers: headers });
 		if (responseData.ok) {
@@ -25,7 +29,7 @@ async function loadCacheData() {
 			cache.countryLookup = data.countryLookup;
 		}
 		if(!cache.html) {
-			const response404 = await fetch(`https://bugfix.infodriveindia.com/404/`, { method: 'GET'});
+			const response404 = await fetch(externalLinkFor404, { method: 'GET'});
 			cache.html = await response404.text();
 		}
 		cache.lastFetched = now; // Update fetch timestamp
@@ -51,8 +55,8 @@ export default {
 };
 
 const redirector = {
-	redirectUrl: "https://bugfix-www.volza.com/{statusCode}",
-	domainPrefix: "https://bugfix-www.volza.com",
+	redirectUrl: `${redirectUrl}/{statusCode}`,
+	domainPrefix: redirectUrl,
 	statusHandler: null,
 
 	async fetch(request, response, next) {
@@ -623,7 +627,6 @@ const dynamicRedirections = [
 
 ];
 
-
 var MATCHING_GROUP_REGEXP = /\\.|\((?:\?<(.*?)>)?(?!\?)/g;
 function pathToRegexp(path, keys, options) {
 	options = options || {};
@@ -708,10 +711,6 @@ function pathToRegexp(path, keys, options) {
 
 	return new RegExp('^' + path, options.sensitive ? '' : 'i');
 };
-
-const redirectUrl = 'https://bugfix-www.volza.com';
-const wordPressSiteRedirectUrl = 'https://infodriveindia.in';
-const infodriveUrl = 'https://www.infodriveindia.com';
 
 const util = {
 	replacement: ({ params, rule }) => {
