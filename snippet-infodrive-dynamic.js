@@ -16,7 +16,7 @@ const redirectUrl = 'https://bugfix-www.volza.com';//site where we need to redir
 const baseUrl = "https://bugfix-www.volza.com/";//URL to fetch external JSON files
 const wordPressSiteRedirectUrl = 'https://infodriveindia.in';//wordpress site url
 const infodriveUrl = 'https://www.infodriveindia.com';//infodrive site URL
-const externalLinkFor404 = 'https://bugfix.infodriveindia.com/404/'
+const externalLinkFor404 = 'https://bugfix.infodriveindia.com/404/';
 
 async function loadCacheData() {
 	const now = Date.now();
@@ -28,8 +28,8 @@ async function loadCacheData() {
 			cache.countryFilterMapping = data.countryFilterMapping;
 			cache.countryLookup = data.countryLookup;
 		}
-		if(!cache.html) {
-			const response404 = await fetch(externalLinkFor404, { method: 'GET'});
+		if (!cache.html) {
+			const response404 = await fetch(externalLinkFor404, { method: 'GET' });
 			cache.html = await response404.text();
 		}
 		cache.lastFetched = now; // Update fetch timestamp
@@ -62,7 +62,6 @@ const redirector = {
 	async fetch(request, response, next) {
 		const requestURL = new URL(request.url);
 		const result = redirector.retrievePermanentUrl(requestURL.pathname);
-		//TODO get it checked if this is correct way to check if it is cloudflare
 		const isCloudflare = typeof globalThis.Cloudflare !== 'undefined' || request.headers.get('CF-Connecting-IP');
 		if (Response && isCloudflare) {
 			response = Response;
@@ -591,7 +590,7 @@ const dynamicRedirections = [
 			hsCode = '';
 		}
 		if (coo && coo !== 'global' && !cache.countryLookup.find(key => key === coo.replace(/-/g, ' ').toLowerCase())) {
-			return 404;//TODO this case is not yet tested.
+			return 404;
 		}
 
 		const product = !hsCode && keyword ? keyword : keyword.indexOf('hscode') == -1 ? keyword : '';
