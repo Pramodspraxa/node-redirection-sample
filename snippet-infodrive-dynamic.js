@@ -49,6 +49,9 @@ async function loadCacheData() {
 
 export default {
 	async fetch(request, response, next) {
+		if(new URL(request.url).pathname === '/reset-cache') {
+			cache.tradePorts = null;
+		}
 		await loadCacheData();
 		if (!cache.tradePorts) {
 			return new Response("Data not available.", { status: 500 });
