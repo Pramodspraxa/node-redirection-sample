@@ -20,18 +20,22 @@ const infodriveUrl = 'https://www.infodriveindia.com';//infodrive site URL
 async function loadCacheData() {
 	const now = Date.now();
 	if (!cache.tradePorts || !cache.countryFilterMapping || !cache.countryLookup || now - cache.lastFetched > cache.cacheDuration) {
-		const [staticRedirectionRes, responseData] = await Promise.all([
-            fetch(`${baseUrl}static-redirections-infodrive.json`, { headers: headers }),
-            fetch(`${baseUrl}infodrive-dynamic.json`, { headers: headers })
-        ]);
-		if (staticRedirectionRes.ok) cache.staticRedirections = await staticRedirectionRes.json();
-		if (responseData.ok) {
+		try {
+			const responseData = await fetch(`${baseUrl}infodrive-dynamic.json`, { headers: headers });
+			if (!responseData.ok) {
+				console.error(`Failed to fetch data: ${responseData.status} ${responseData.statusText}`);
+				return; // Do not update lastFetched on failure
+			}
 			const data = await responseData.json();
 			cache.tradePorts = data.ports;
 			cache.countryFilterMapping = data.countryFilterMapping;
 			cache.countryLookup = data.countryLookup;
+			cache.staticRedirections = data.staticRules;
+			cache.lastFetched = now; // Update fetch timestamp on success
+			redirector.configure([cache.staticRedirections]);
+		} catch (err) {
+			console.error("Error fetching cache data:", err);
 		}
-		cache.lastFetched = now; // Update fetch timestamp
 	}
 }
 
@@ -41,11 +45,6 @@ export default {
 		if (!cache.tradePorts || !cache.countryFilterMapping || !cache.countryLookup) {
 			return new Response("Data not available.", { status: 500 });
 		}
-		const lists = [];
-		if (cache.staticRedirections) {
-			lists.push(cache.staticRedirections);
-		}
-		redirector.configure(lists);
 		return redirector.fetch(request, response, next);
 	},
 };

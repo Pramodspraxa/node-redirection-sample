@@ -20,35 +20,42 @@ const externalLinkFor404 = 'https://bugfix.infodriveindia.com/404/';
 
 async function loadCacheData() {
 	const now = Date.now();
-	if (!cache.tradePorts || !cache.countryFilterMapping || !cache.countryLookup || now - cache.lastFetched > cache.cacheDuration) {
-		const responseData = await fetch(`${baseUrl}infodrive-dynamic.json`, { headers: headers });
-		if (responseData.ok) {
+	if (!cache.tradePorts || now - cache.lastFetched > cache.cacheDuration) {
+		try {
+			const responseData = await fetch(`${baseUrl}infodrive-dynamic.json`, { headers: headers });
+			if (!responseData.ok) {
+				console.error(`Failed to fetch data: ${responseData.status} ${responseData.statusText}`);
+				return; // Do not update lastFetched on failure
+			}
 			const data = await responseData.json();
 			cache.tradePorts = data.ports;
 			cache.countryFilterMapping = data.countryFilterMapping;
 			cache.countryLookup = data.countryLookup;
+			if (!cache.html) {
+				const response404 = await fetch(externalLinkFor404, { method: 'GET' });
+				cache.html = await response404.text();
+			}
+			cache.lastFetched = now; // Update fetch timestamp
+			redirector.configure([dynamicRedirections]);
+			redirector.statusHandler = (req, res, next) => {
+				return new Response(cache.html,
+					{
+						status: 404,
+						headers: { "Content-Type": "text/html" }
+					});
+			}
 		}
-		if (!cache.html) {
-			const response404 = await fetch(externalLinkFor404, { method: 'GET' });
-			cache.html = await response404.text();
+		catch (err) {
+			console.error("Error fetching cache data:", err);
 		}
-		cache.lastFetched = now; // Update fetch timestamp
 	}
 }
 
 export default {
 	async fetch(request, response, next) {
 		await loadCacheData();
-		if (!cache.tradePorts || !cache.countryFilterMapping || !cache.countryLookup) {
+		if (!cache.tradePorts) {
 			return new Response("Data not available.", { status: 500 });
-		}
-		redirector.configure([dynamicRedirections]);
-		redirector.statusHandler = (req, res, next) => {
-			return new Response(cache.html,
-				{
-					status: 404,
-					headers: { "Content-Type": "text/html" }
-				});
 		}
 		return redirector.fetch(request, response, next);
 	}
@@ -103,8 +110,6 @@ const redirector = {
 		});
 		this.permanentRedirectionList = finalList;
 	},
-
-	logger: console,
 
 	retrievePermanentUrl: function (source) {
 		const ruleList = this.permanentRedirectionList;
