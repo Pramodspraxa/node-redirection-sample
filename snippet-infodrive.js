@@ -1,9 +1,7 @@
 const cache = {
 	tradePorts: null,
 	countryFilterMapping: null,
-	countryLookup: null,
-	lastFetched: 0, // Timestamp of last fetch
-	cacheDuration: 24 * 60 * 60 * 1000, // Cache for 24 hour
+	countryLookup: null
 };
 const headers = {
 	"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
@@ -18,20 +16,18 @@ const wordPressSiteRedirectUrl = 'https://infodriveindia.in';//wordpress site ur
 const infodriveUrl = 'https://www.infodriveindia.com';//infodrive site URL
 
 async function loadCacheData() {
-	const now = Date.now();
-	if (!cache.tradePorts || !cache.countryFilterMapping || !cache.countryLookup || now - cache.lastFetched > cache.cacheDuration) {
+	if (!cache.tradePorts) {
 		try {
 			const responseData = await fetch(`${baseUrl}infodrive-dynamic.json`, { headers: headers });
 			if (!responseData.ok) {
 				console.error(`Failed to fetch data: ${responseData.status} ${responseData.statusText}`);
-				return; // Do not update lastFetched on failure
+				return;
 			}
 			const data = await responseData.json();
 			cache.tradePorts = data.ports;
 			cache.countryFilterMapping = data.countryFilterMapping;
 			cache.countryLookup = data.countryLookup;
 			cache.staticRedirections = data.staticRules;
-			cache.lastFetched = now; // Update fetch timestamp on success
 			redirector.configure([cache.staticRedirections]);
 		} catch (err) {
 			console.error("Error fetching cache data:", err);
@@ -42,7 +38,7 @@ async function loadCacheData() {
 export default {
 	async fetch(request, response, next) {
 		await loadCacheData();
-		if (!cache.tradePorts || !cache.countryFilterMapping || !cache.countryLookup) {
+		if (!cache.tradePorts) {
 			return new Response("Data not available.", { status: 500 });
 		}
 		return redirector.fetch(request, response, next);

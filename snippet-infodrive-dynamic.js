@@ -1,9 +1,7 @@
 const cache = {
 	tradePorts: null,
 	countryFilterMapping: null,
-	countryLookup: null,
-	lastFetched: 0, // Timestamp of last fetch
-	cacheDuration: 24 * 60 * 60 * 1000, // Cache for 24 hour
+	countryLookup: null
 };
 const headers = {
 	"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
@@ -19,13 +17,12 @@ const infodriveUrl = 'https://www.infodriveindia.com';//infodrive site URL
 const externalLinkFor404 = 'https://bugfix.infodriveindia.com/404/';
 
 async function loadCacheData() {
-	const now = Date.now();
-	if (!cache.tradePorts || now - cache.lastFetched > cache.cacheDuration) {
+	if (!cache.tradePorts) {
 		try {
 			const responseData = await fetch(`${baseUrl}infodrive-dynamic.json`, { headers: headers });
 			if (!responseData.ok) {
 				console.error(`Failed to fetch data: ${responseData.status} ${responseData.statusText}`);
-				return; // Do not update lastFetched on failure
+				return;
 			}
 			const data = await responseData.json();
 			cache.tradePorts = data.ports;
@@ -35,7 +32,6 @@ async function loadCacheData() {
 				const response404 = await fetch(externalLinkFor404, { method: 'GET' });
 				cache.html = await response404.text();
 			}
-			cache.lastFetched = now; // Update fetch timestamp
 			redirector.configure([dynamicRedirections]);
 			redirector.statusHandler = (req, res, next) => {
 				return new Response(cache.html,
