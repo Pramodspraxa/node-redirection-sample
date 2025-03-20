@@ -3,15 +3,7 @@ const cache = {
 	countryFilterMapping: null,
 	countryLookup: null
 };
-const headers = {
-	"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
-	"Accept": "application/json, text/plain, */*",
-	"Accept-Language": "en-US,en;q=0.9",
-	"Referer": "https://volza.com/", // Set as if it's a page visit
-	"Connection": "keep-alive"
-}
 const redirectUrl = 'https://bugfix-www.volza.com';//site where we need to redirect on Volza
-const baseUrl = "https://bugfix-www.volza.com/";//URL to fetch external JSON files
 const wordPressSiteRedirectUrl = 'https://infodriveindia.in';//wordpress site url
 const infodriveUrl = 'https://www.infodriveindia.com';//infodrive site URL
 const externalLinkFor404 = 'https://bugfix.infodriveindia.com/404/';
@@ -19,7 +11,7 @@ const externalLinkFor404 = 'https://bugfix.infodriveindia.com/404/';
 async function loadCacheData() {
 	if (!cache.tradePorts) {
 		try {
-			const responseData = await fetch(`${baseUrl}infodrive-dynamic.json`, { headers: headers });
+			const responseData = await fetch(`https://square-hat-1d46.volza-llc.workers.dev`);
 			if (!responseData.ok) {
 				console.error(`Failed to fetch data: ${responseData.status} ${responseData.statusText}`);
 				return;
