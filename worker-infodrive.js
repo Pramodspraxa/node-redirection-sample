@@ -2,17 +2,16 @@ const redirectUrl = 'https://bugfix-www.volza.com';//site where we need to redir
 const wordPressSiteRedirectUrl = 'https://infodriveindia.in';//wordpress site url
 const infodriveUrl = 'https://www.infodriveindia.com';//infodrive site URL
 const externalLinkFor404 = 'https://bugfix.infodriveindia.com/404/';
-
 const cacheManager = {
-	get: async function (source, callback) {
+	get: async function (env, callback) {
 		if (!this.cache) {
 			try {
-				const responseData = await fetch(source);
-				if (!responseData.ok) {
+				const responseData = await env.CACHE_STORAGE.get("infodrive-dynamic.json");
+				if (!responseData) {
 					console.error(`Failed to fetch data: ${responseData.status} ${responseData.statusText}`);
 					return;
 				}
-				const cache = await responseData.json();
+				const cache = JSON.parse(responseData);
 				if (!cache.html) {
 					const response404 = await fetch(externalLinkFor404, { method: 'GET' });
 					cache.html = await response404.text();
@@ -30,7 +29,7 @@ const cacheManager = {
 
 export default {
 	async fetch(request, env, ctx) {
-		const result = await cacheManager.get(`https://square-hat-1d46.volza-llc.workers.dev`, function (cache) {
+		const result = await cacheManager.get(env, function (cache) {
 			redirector.configure([cache.staticRedirections, dynamicRedirections]);
 			util.cache = cache;
 			redirector.statusHandler = (req, res, next) => {
@@ -498,13 +497,13 @@ const dynamicRedirections = [
 	['/:expImp(exporter|importer)-to-us/:keyword-:expImp2(export|import)-to-us?(/foreign-port-:port)?(/foreign-country-:country)?(/us-port-:usPort)?.aspx', "$usCodMapper"],
 	['/shipment-data/:coo-:tabName(exporters-importers-export-import-data|importers-buyers|exporters-suppliers|import-data|export-data)-of-port-(:portName)-(:portCode)(-:fromTo(to|from))?(-:cod)?',
 		({ params }) => {
-			const { tabName, portName, portCode, coo, cod } = params;
-			const portCountry = Object.entries(this.cache.tradePorts).find(([, details]) => details[0] === portCode)?.[1][1] || '';
+			const { tabName, portName, portCode } = params;
+			const portCountry = Object.entries(util.cache.tradePorts).find(([, details]) => details[0].toLowerCase() === portCode)?.[1][1] || '';
 			if (portCountry) {
 				const expImpType = expImpTypeMap[tabName] || "export-import";
 				const tabText = tabwiseText[tabName] || "search";
 				const portPrefix = portPrefixMap[tabName] || "";
-				return `/global-trade-data/${portCountry.toLowerCase().replace(/ /g, '-')}-${expImpType}-trade-data/${tabText}/${portPrefix}port-${portName}-${portCode}${coo && coo != 'global' ? `/coo-${coo}` : ''}${cod ? `/cod-${cod}` : ''}/`;
+				return `/global-trade-data/${portCountry.toLowerCase().replace(/ /g, '-')}-${expImpType}-trade-data/${tabText}/${portPrefix}port-${portName}-${portCode}/`;
 			}
 			else {
 				return `/ports/india-ports/`;
@@ -580,7 +579,7 @@ const dynamicRedirections = [
 		if (hsCode && !numericRegex.test(hsCode)) {
 			hsCode = '';
 		}
-		if (coo && coo !== 'global' && !this.cache.countryLookup.find(key => key === coo.replace(/-/g, ' ').toLowerCase())) {
+		if (coo && coo !== 'global' && !util.cache.countryLookup.find(key => key === coo.replace(/-/g, ' ').toLowerCase())) {
 			return 404;
 		}
 
@@ -814,7 +813,7 @@ const util = {
 		}
 		if (country === 'korea') return 'north-korea';
 		country = country.replace(/[ _]/g, '-').replace(/-{2,}/g, '-').replace(/^-+|-+$/g, '');
-		country = (this.cache.countryFilterMapping[country] || country).replace(/ /g, '-').split('/')[0].toLowerCase();
+		country = (util.cache.countryFilterMapping[country] || country).replace(/ /g, '-').split('/')[0].toLowerCase();
 		return country || '';
 	},
 	cleanKeyword: (keyword) => {
@@ -832,7 +831,7 @@ const util = {
 	},
 	removeSpecialCharacterSearch: ["not-available", "not available", "not_available"],
 	findCountryByPort: (port) => {
-		const [code, country] = this.cache.tradePorts[port] || ['', ''];
+		const [code, country] = util.cache.tradePorts[port] || ['', ''];
 		return { country, code };
 	},
 	getCountryFilterMapping: (country) => {
@@ -842,7 +841,7 @@ const util = {
 		//first replace space and underscore with hyphen, then replace multiple continuous hyphens with single hyphen and then remove leading and trailing hyphens.
 		let toReturn = country.replace(/[ _]/g, '-').replace(/-{2,}/g, '-').replace(/^-+|-+$/g, '');
 		toReturn = toReturn.replace(/^from-/, '');//remove "from-" prefix from the start of string as it comes for multiple countries.
-		toReturn = (this.cache.countryFilterMapping[toReturn] || toReturn).replace(/ /g, '-').toLowerCase();
+		toReturn = (util.cache.countryFilterMapping[toReturn] || toReturn).replace(/ /g, '-').toLowerCase();
 		if (toReturn === 'n/a' || toReturn === 'not-available' || toReturn === 'na') {
 			toReturn = '';
 		}
