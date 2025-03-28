@@ -5,6 +5,9 @@ const regexKeywordDiffPattern = /\b(exports|imports)\b\s*[+-]\s*\b(in|from)\b\s*
 const regexForTopProductMultiCountry = /^\/?[a-zA-Z]+-to-[a-zA-Z]+$/;
 const hsCodeWithOrKeyword = /^(\d{4,8})-or-hscode$/;
 const hsCodeKeywordRegex = /^(\d{4,8})-hscode$/;
+const inFromCountry = {
+    'in-india': 'india'
+}
 const urlMappings = {
     'exporters-importers-export-import': '/trade-data',
     'buyers': '/buyers',
@@ -543,10 +546,12 @@ const dynamicRedirectionsVolza = [
             finalKeyword = util.cleanKeyword(finalKeyword);
             finalHsKeyword = finalHsKeyword.replace(/[^a-zA-Z0-9/]/g, '');
             if (coo) {
+                coo = inFromCountry[coo] || coo;
                 coo = util.parseCountryName(coo);
                 coo = util.cleanKeyword(coo);
             }
             if (cod) {
+                cod = inFromCountry[cod] || cod;
                 cod = util.cleanKeyword(cod);
                 cod = util.parseCountryName(cod);
             }
@@ -656,11 +661,11 @@ const dynamicRedirectionsVolza = [
             const { country } = params;
             const countryClean = util.parseCountryName(country);
             if (!regexForTopProductMultiCountry.test(countryClean)) {
-                return res.redirect(util.StatusCode.PermanentRedirect, `/global-trade-data/${countryClean}-import-trade-data/top-import-products-of-${countryClean}/`);
+                return `/global-trade-data/${countryClean}-import-trade-data/top-import-products-of-${countryClean}/`;
             }
             else if (regexForTopProductMultiCountry.test(countryClean)) {
                 const sanitizedUrlFirstCountry = countryClean.split('-to-')[0]
-                return res.redirect(util.StatusCode.PermanentRedirect, `/global-trade-data/${sanitizedUrlFirstCountry}-import-trade-data/top-import-products-from-${countryClean}/`);
+                return `/global-trade-data/${sanitizedUrlFirstCountry}-import-trade-data/top-import-products-from-${countryClean}/`;
             }
             return '';//No need of redirect case
         }
