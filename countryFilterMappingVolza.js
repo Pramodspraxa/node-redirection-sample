@@ -22,6 +22,7 @@ module.exports = {
     "spaint3": "spain",
     "srilanka": "sri lanka",
     "srilankat3": "sri lanka",
+	"china-taiwan": "taiwan",
     "uae": "united arab emirates",
     "ukt3": "united kingdom",
     "united kingdom": "united kingdom",
@@ -105,5 +106,6 @@ module.exports = {
     "chile t1": "chile",
     "venezuela t1": "venezuela",
     "peru t1": "peru",
-    "peru t2": "peru"
+	"peru t2": "peru",
+	"hn-honduras": "honduras"
 }
