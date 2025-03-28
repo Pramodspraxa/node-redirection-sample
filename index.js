@@ -1,4 +1,4 @@
-const { util } = require('./dynamicRedirections');
+const { util } = require('./dynamicRedirectionsVolza');
 const pathToRegexp = require('./path-to-regexp');
 
 const redirector = {

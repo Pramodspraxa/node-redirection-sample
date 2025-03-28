@@ -145,7 +145,7 @@ const util = {
         const { hsCode, expImp, keyword } = params;
         const country = util.parseCountryName(params.country);
         const isImport = expImp === 'import';
-        const cleanKeyword = hsCode ? `hsn-code-${hsCode}`: `${util.cleanKeyword(keyword)}`;
+        const cleanKeyword = hsCode ? `hsn-code-${hsCode}` : `${util.cleanKeyword(keyword)}`;
         return `/p/${cleanKeyword}/${expImp}/${isImport ? 'import-in' : 'export-from'}-india/${country ? (`${isImport ? 'coo' : 'cod'}-${country}/`) : ''}`;
     },
     parseCountryName(country, returnDefault) {
@@ -198,7 +198,7 @@ const util = {
     }
 }
 
-const dynamicRedirections = [
+const dynamicRedirectionsVolza = [
     ['/traderesources/port:pageNo([0-9]{2,5}).aspx', `/ports/`],
     ['/products/:keyword.aspx', '/p/{keyword}/'],
     ['/india-:expImp(import|export)-data/:hsCode-hscode-:expImp2(import|export)-data.aspx', '/p/hsn-code-{hsCode}/{expImp}/{importInOrExportTo}-india/'],
@@ -684,6 +684,6 @@ const dynamicRedirections = [
 ];
 
 module.exports = {
-    dynamicRedirections,
+    dynamicRedirectionsVolza,
     util
 }
