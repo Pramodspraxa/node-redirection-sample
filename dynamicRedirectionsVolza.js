@@ -156,8 +156,8 @@ const util = {
             return returnDefault ? 'global' : '';
         }
         if (country === 'korea') return 'north-korea';
-        country = country.replace(/[ _]/g, '-').replace(/-{2,}/g, '-').replace(/^-+|-+$/g, '');
-        country = (countryFilterMapping[country] || country).replace(/ /g, '-').split('/')[0].toLowerCase();
+        country = country.replace(/[ _]/g, '-').replace(/-{2,}/g, '-').replace(/^-+|-+$/g, '').toLowerCase();
+        country = (countryFilterMapping[country] || country).replace(/ /g, '-').split('/')[0];
         return country || '';
     },
     cleanKeyword: (keyword) => {
@@ -191,9 +191,9 @@ const util = {
             return "";
         }
         //first replace space and underscore with hyphen, then replace multiple continuous hyphens with single hyphen and then remove leading and trailing hyphens.
-        let toReturn = country.replace(/[ _]/g, '-').replace(/-{2,}/g, '-').replace(/^-+|-+$/g, '');
+        let toReturn = country.replace(/[ _]/g, '-').replace(/-{2,}/g, '-').replace(/^-+|-+$/g, '').toLowerCase();
         toReturn = toReturn.replace(/^from-/, '');//remove "from-" prefix from the start of string as it comes for multiple countries.
-        toReturn = (countryFilterMapping[toReturn] || toReturn).replace(/ /g, '-').toLowerCase();
+        toReturn = (countryFilterMapping[toReturn] || toReturn).replace(/ /g, '-');
         if (toReturn === 'n/a' || toReturn === 'not-available' || toReturn === 'na') {
             toReturn = '';
         }
@@ -467,7 +467,7 @@ const dynamicRedirectionsVolza = [
         }
     ],
     ['/product/:keyword-global-export-import-trade-data.php', '/p/{keyword}/'],
-    ['/product/:countryName-:expImp(export|import)-trade-data-:product.php', '/p/{product}/{expImp}/{importInOrExportTo}-{countryName}/'],
+    ['/product/:COD-:expImp(export|import)-trade-data-:product.php', '/p/{product}/{expImp}/{importInOrExportTo}-{COD}/'],
     ['/product/:keyword.php', '/p/{keyword}/'],
     ['/search/:product-:expImp(export|import)-data-:country.php', '/p/{product}/{expImp}/{importInOrExportTo}-{country}/'],
     ['/search/:keyword.php', '/p/{keyword}/'],
@@ -664,7 +664,7 @@ const dynamicRedirectionsVolza = [
                 return `/global-trade-data/${countryClean}-import-trade-data/top-import-products-of-${countryClean}/`;
             }
             else if (regexForTopProductMultiCountry.test(countryClean)) {
-                const sanitizedUrlFirstCountry = countryClean.split('-to-')[0]
+                const sanitizedUrlFirstCountry = countryClean.split('-to-')[0];
                 return `/global-trade-data/${sanitizedUrlFirstCountry}-import-trade-data/top-import-products-from-${countryClean}/`;
             }
             return '';//No need of redirect case
